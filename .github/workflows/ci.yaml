@@ -32,7 +32,7 @@ jobs:
 
     - name: Decode Keystore
       run: |
-        echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > app/keystore/release-key.jks
+        echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > release-key.jks
       shell: bash
 
     - name: Verify keystore file
