@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "771056407522",
+    "project_id": "android-ci-cd-demo-e4649",
+    "storage_bucket": "android-ci-cd-demo-e4649.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:771056407522:android:5acbf697f63f3b59fedfbb",
+        "android_client_info": {
+          "package_name": "com.example.helloworld"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNASYONwsWBtN-qoXuSoTaUhiSsqirQJg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

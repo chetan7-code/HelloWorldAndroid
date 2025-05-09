@@ -1,0 +1,45 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Decode Keystore
+      run: |
+        echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > release-key.jks
+
+    - name: Build with Gradle
+      run: ./gradlew assembleRelease
+
+    - name: Sign APK
+      run: |
+        jarsigner -verbose \
+          -keystore release-key.jks \
+          -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
+          -keypass ${{ secrets.KEY_PASSWORD }} \
+          app/build/outputs/apk/release/app-release-unsigned.apk \
+          ${{ secrets.KEY_ALIAS }}
+
+    - name: Align APK
+      run: |
+        zipalign -v 4 app/build/outputs/apk/release/app-release-unsigned.apk app-release.apk
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: signed-apk
+        path: app-release.apk
