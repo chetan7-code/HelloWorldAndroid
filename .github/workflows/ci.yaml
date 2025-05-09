@@ -24,12 +24,6 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
-
-    - name: Create keystore directory
-      run: mkdir -p app/keystore
-
     - name: Decode Keystore
       run: |
         echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > release-key.jks
@@ -37,30 +31,34 @@ jobs:
 
     - name: Verify keystore file
       run: |
-        ls -l app/keystore/
-        file app/keystore/release-key.jks
+        ls -l release-key.jks
+        file release-key.jks
 
     - name: Build Release APK
-      run: ./gradlew assembleRelease
+      run: ./gradlew assembleRelease --stacktrace
       env:
         SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
 
-    - name: Sign APK
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Sign and Align APK
       run: |
+        # Sign APK
         jarsigner -verbose \
-          -keystore app/keystore/release-key.jks \
+          -keystore release-key.jks \
           -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
           -keypass ${{ secrets.KEY_PASSWORD }} \
           app/build/outputs/apk/release/app-release-unsigned.apk \
           ${{ secrets.KEY_ALIAS }}
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+        # Verify signing
+        jarsigner -verify \
+          app/build/outputs/apk/release/app-release-unsigned.apk
 
-    - name: Align APK
-      run: |
+        # Align APK
         ${ANDROID_HOME}/build-tools/34.0.0/zipalign -v 4 \
           app/build/outputs/apk/release/app-release-unsigned.apk \
           app-release.apk
