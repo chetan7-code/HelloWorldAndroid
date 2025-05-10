@@ -29,21 +29,19 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("release-key.jks")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: properties["KEYSTORE_PASSWORD"].toString()
-            keyAlias = System.getenv("KEY_ALIAS") ?: properties["KEY_ALIAS"].toString()
-            keyPassword = System.getenv("KEY_PASSWORD") ?: properties["KEY_PASSWORD"].toString()
+            storeFile file("release-key.jks")  // Must match the filename in CI
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
+            keyAlias System.getenv("KEY_ALIAS") ?: ""
+            keyPassword System.getenv("KEY_PASSWORD") ?: ""
         }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }

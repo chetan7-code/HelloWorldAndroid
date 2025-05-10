@@ -36,27 +36,30 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew assembleDebug --stacktrace
 
-    # If tests pass, proceed with release build
-    - name: Decode Keystore
+    # Keystore handling using your exact secret names
+    - name: Setup Keystore
       run: |
-        echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > app/release-key.jks
+        echo "${{ secrets.KEYSTORE_FILE }}" > keystore.b64
+        base64 -d keystore.b64 > app/release-key.jks
+        rm keystore.b64
+        # Verify keystore exists and alias is correct
+        keytool -list -v \
+          -keystore app/release-key.jks \
+          -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+          -alias "${{ secrets.KEY_ALIAS }}" || exit 1
       shell: bash
 
-    - name: Create local.properties
-      run: |
-        echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> local.properties
-        echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> local.properties
-        echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> local.properties
-
     - name: Build Release APK
-      run: ./gradlew assembleRelease --stacktrace
-      env:
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file=app/release-key.jks \
+          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+          -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+          -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }} \
+          --stacktrace
 
     - name: Upload Test Reports
-      if: always() # Upload reports regardless of test outcome
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: test-reports
