@@ -27,24 +27,55 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    - name: Run Tests
+      run: ./gradlew testDebugUnitTest
+
     - name: Decode Keystore
       run: |
         echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > release-key.jks
       shell: bash
 
-    - name: Verify keystore file
+    - name: Create local.properties
       run: |
-        ls -l app/release-key.jks
-        file app/release-key.jks
+        echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> local.properties
+        echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> local.properties
+        echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> local.properties
 
     - name: Build Release APK
-      run: ./gradlew assembleRelease --stacktrace
+      run: ./gradlew assembleRelease
       env:
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-    - name: Upload APK
+    - name: Upload APK to Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: release-apk
         path: app/build/outputs/apk/release/app-release.apk
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # Only deploy on main branch
+
+    steps:
+    - name: Download APK from build
+      uses: actions/download-artifact@v4
+      with:
+        name: release-apk
+
+    - name: Create Firebase Service Credentials file
+      run: echo '${{ secrets.CREDENTIAL_FILE_CONTENT }}' > firebase-service-account.json
+
+    - name: Deploy to Firebase App Distribution
+      uses: wzieba/Firebase-Distribution-Github-Action@v1
+      with:
+        appId: ${{ secrets.FIREBASE_APP_ID }}
+        serviceCredentialsFile: firebase-service-account.json
+        groups: testers
+        file: app-release.apk
+        releaseNotes: |
+          Changes in this build:
+          - Commit: ${{ github.sha }}
+          - Commit message: ${{ github.event.head_commit.message }}
